@@ -3,15 +3,16 @@ const FILES_TO_CACHE = [
   'index.html',
   'styles.css',
   'index.js',
+  'db.js',
 ];
 
-const PRECACHE = 'precache-v1';
-const RUNTIME = 'runtime';
+const CACHE_NAME = 'static-cache-v2';
+const DATA_CACHE_NAME = 'data-cache-v1';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches
-      .open(PRECACHE)
+      .open(CACHE_NAME)
       .then((cache) => cache.addAll(FILES_TO_CACHE))
       .then(self.skipWaiting())
   );
@@ -19,7 +20,7 @@ self.addEventListener('install', (event) => {
 
 // The activate handler takes care of cleaning up old caches.
 self.addEventListener('activate', (event) => {
-  const currentCaches = [PRECACHE, RUNTIME];
+  const currentCaches = [CACHE_NAME, DATA_CACHE_NAME];
   event.waitUntil(
     caches
       .keys()
@@ -37,22 +38,12 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-self.addEventListener('fetch', (event) => {
-  if (event.request.url.startsWith(self.location.origin)) {
-    event.respondWith(
-      caches.match(event.request).then((cachedResponse) => {
-        if (cachedResponse) {
-          return cachedResponse;
-        }
-
-        return caches.open(RUNTIME).then((cache) => {
-          return fetch(event.request).then((response) => {
-            return cache.put(event.request, response.clone()).then(() => {
-              return response;
-            });
-          });
-        });
-      })
-    );
-  }
+self.addEventListener("fetch", function(evt) {
+  evt.respondWith(
+    caches.open(CACHE_NAME).then(cache => {
+      return cache.match(evt.request).then(response => {
+        return response || fetch(evt.request);
+      });
+    })
+  );
 });
